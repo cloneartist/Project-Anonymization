@@ -1,5 +1,5 @@
 import random
-import wordmap
+import abstract.wordmap as wordmap
 def perturb_string(text, epsilon):
     chars = list(text)
     # print("chars:", chars, "len(chars):", len(chars))
@@ -17,6 +17,6 @@ def perturb_string(text, epsilon):
     perturbed_text = ''.join(new_char_list)
     return perturbed_text
 
-name = "Hana"
-perturbed_name = perturb_string(name, epsilon=0.1)
-print("Perturbed name:", perturbed_name)
+# name = "Hana"
+# perturbed_name = perturb_string(name, epsilon=0.1)
+# print("Perturbed name:", perturbed_name)

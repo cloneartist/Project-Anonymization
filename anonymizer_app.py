@@ -8,14 +8,15 @@ from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 from datetime import datetime
 import numpy as np
 from diffprivlib.mechanisms import Laplace
-
+from faker import Faker
 st.title("Data Anonymizer")
-
+fake= Faker()
 # Load the Twitter data CSV file
 uploaded_file = st.file_uploader("Upload Tweets dataset", type="csv")
 if uploaded_file is not None:
     # Read the CSV file into a Pandas dataframe
     df = pd.read_csv(uploaded_file, nrows=20)
+    print(list(df.columns))
     # Show the original data table
     st.write("Original data table")
     st.write(df)
@@ -83,9 +84,9 @@ if uploaded_file is not None:
 
     # Determine the K value
     K = 5
-
+    
     # Identify the quasi-identifiers
-    quasi_identifiers = ['Tweet Location', 'User Followers', 'User Following', 'User Account Creation Date', 'Tweet Posted Time (UTC)']
+    quasi_identifiers = ['Name','Tweet Location', 'User Followers', 'User Following', 'User Account Creation Date', 'Tweet Posted Time (UTC)']
 
     # Group the individuals based on the quasi-identifiers
     groups = df.groupby(quasi_identifiers)
@@ -132,7 +133,8 @@ if uploaded_file is not None:
         month_year = dt_object.strftime("%b, %Y")
 
         return month_year
-
+    def generalize_name(x):
+        return fake.name()
     # Generalize or suppress the values of the quasi-identifiers in each group
     generalized_data = []
     for name, group in groups:
@@ -150,10 +152,13 @@ if uploaded_file is not None:
             elif col == 'Tweet Posted Time (UTC)':
                 # Generalize User Account Creation Date to month and year
                 generalized_group[col] = group[col].apply(lambda x: generalize_account_creation_date(x))
+            elif col == 'Name':
+                # Generalize User Account Creation Date to month and year
+                generalized_group[col] = group[col].apply(lambda x: generalize_name(x))
         generalized_data.append(generalized_group)
 
     # Create a new DataFrame with the anonymized quasi-identifiers and the non-sensitive attribute Tweet Content
-    anonymized_data = pd.concat(generalized_data)[['Tweet Location', 'User Followers', 'User Following', 'User Account Creation Date', 'Tweet Content', 'Tweet Posted Time (UTC)']]
+    anonymized_data = pd.concat(generalized_data)[['Name','Tweet Location', 'User Followers', 'User Following', 'User Account Creation Date', 'Tweet Content', 'Tweet Posted Time (UTC)']]
 
     # Verify that each group satisfies the K-Anonymity condition and merge groups if necessary
     k_anonymized_data = []
