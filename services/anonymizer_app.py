@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import math
 from presidio_anonymizer import AnonymizerEngine
 from presidio_anonymizer.entities import OperatorConfig
 from presidio_analyzer import AnalyzerEngine, Pattern, PatternRecognizer
@@ -176,5 +177,48 @@ if uploaded_file is not None:
     df = pd.concat(k_anonymized_data)
     df = df.rename(columns={'Tweet Posted Time (UTC)': 'Tweet Posted Date'})
     df = df.drop_duplicates()
-    st.write("Anonymized Dataset")
+    st.write("K-Anonymized Dataset")
+    st.write(df)
+    # Define the sensitive attribute
+    sensitive_attribute = 'User Id'
+
+    # Define the l value for l-diversity
+    l = 10
+
+    # Apply l-diversity
+    def apply_l_diversity(df, sensitive_attribute, l):
+        # Get the unique sensitive values
+        sensitive_values = df[sensitive_attribute].unique()
+
+        # For each sensitive value, create a dictionary of the different values for each sensitive value
+        for value in sensitive_values:
+            # Get the rows with the sensitive value
+            rows = df[df[sensitive_attribute] == value]
+
+            # Get the rows with the sensitive value
+            rows = df[df[sensitive_attribute] == value]
+
+            # Select only the non-sensitive columns to find unique combinations
+            non_sensitive_columns = [column for column in df.columns if column != sensitive_attribute]
+
+            # Use the non-sensitive columns to identify unique combinations
+            unique_rows = rows.drop_duplicates(subset=non_sensitive_columns)
+
+            # Select only the sensitive attribute from the unique combinations
+            unique_values = unique_rows[sensitive_attribute].values
+
+            # If there are less than l unique values, replace the values with a generalization
+            if len(unique_values) < l:
+                # Generalize the sensitive attribute value
+                num_digits = int(math.log10(l - 1)) + 1
+                generalized_value = 'G' + value.astype(str).zfill(num_digits-1)
+                
+                # Replace the original sensitive attribute value with the generalized value
+                df.loc[df[sensitive_attribute] == value, sensitive_attribute] = generalized_value
+
+        return df
+
+    df = apply_l_diversity(df, sensitive_attribute, l)
+            
+    st.write("L-Diversity Applied Dataset")
     st.write(df)
