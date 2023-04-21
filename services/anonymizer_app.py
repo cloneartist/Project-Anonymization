@@ -9,6 +9,9 @@ from datetime import datetime
 import numpy as np
 from diffprivlib.mechanisms import Laplace
 from faker import Faker
+import pandas_profiling as pp
+import re
+
 st.title("Data Anonymizer")
 fake= Faker()
 # Load the Twitter data CSV file
@@ -16,7 +19,38 @@ uploaded_file = st.file_uploader("Upload Tweets dataset", type="csv")
 if uploaded_file is not None:
     # Read the CSV file into a Pandas dataframe
     df = pd.read_csv(uploaded_file, nrows=20)
+
+
+    print("---------------------------------------------------------------------------------------")
+
     print(list(df.columns))
+
+    print(df.dtypes)
+
+    pattern = r".*(name|address|phone_number|ssn|code|pin|pan|aadhaar|account|number|mail|location|date|time|user|id).*" # Example pattern for common quasi-identifiers
+    # Create an empty list to store the identified quasi-identifiers
+    quasi_identifiers_regex = []
+    # Loop over each column name in the dataset
+    for col in df.columns:
+        # Search for the pattern in the column name
+        matches = re.findall(pattern, col, flags=re.IGNORECASE)
+        # If any matches are found, add the column name to the quasi-identifiers list
+        if matches:
+            quasi_identifiers_regex.append(col)
+    # Print the identified quasi-identifiers
+    print("Identified quasi-identifiers:", quasi_identifiers_regex)
+
+
+
+
+    # Generate a report using pandas-profiling
+    report = pp.ProfileReport(df)
+    # Print the report and look for columns with high cardinality or unique values
+    report.to_file("outputbefore.html")
+
+    print("---------------------------------------------------------------------------------------")
+
+
     # Show the original data table
     st.write("Original data table")
     st.write(df)
@@ -177,4 +211,13 @@ if uploaded_file is not None:
     df = df.rename(columns={'Tweet Posted Time (UTC)': 'Tweet Posted Date'})
     df = df.drop_duplicates()
     st.write("Anonymized Dataset")
+
+
+    # Generate a report using pandas-profiling
+    report = pp.ProfileReport(df)
+    # Print the report and look for columns with high cardinality or unique values
+    report.to_file("outputafter.html")
+
+
+
     st.write(df)
