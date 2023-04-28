@@ -17,7 +17,7 @@ fake= Faker()
 # Load the Twitter data CSV file
 uploaded_file = st.file_uploader("Upload Tweets dataset", type="csv")
 if uploaded_file is not None:
-    # Read the CSV file into a Pandas dataframe
+   # Read the CSV file into a Pandas dataframe
     df = pd.read_csv(uploaded_file, nrows=20)
 
 
@@ -221,3 +221,95 @@ if uploaded_file is not None:
 
 
     st.write(df)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# import streamlit as st
+# import pandas as pd
+# import streamlit as st
+# import plotly.graph_objects as go
+# from streamlit_extras.switch_page_button import switch_page
+
+# # Set page title
+# st.set_page_config(page_title="CSV File Selector")
+
+# # Create file uploader
+# uploaded_file = st.file_uploader("Upload a CSV file", type="csv")
+
+# if uploaded_file is not None:
+#     # Load data from file
+#     df = pd.read_csv(uploaded_file)
+
+#     # Display column headers
+#     st.write("## Generalizes")
+    
+#     # Get column names
+#     columns = df.columns.tolist()
+
+#     # Create checkboxes for column selection
+#     generalize_cols = st.multiselect("Select columns", columns)
+
+#     # Display generalize columns
+#     st.write("## Generalize Selected Columns")
+#     st.write(generalize_cols)
+
+#     # Display column headers
+#     st.write("## Privacy")
+
+#     remaining_cols = list(set(df.columns) - set(generalize_cols))
+#     select_remaining = st.multiselect("Select all remaining columns", remaining_cols)
+
+#     # Display privacy columns
+#     st.write("## Privacy Selected Columns")
+#     st.write(select_remaining)
+
+#     # Display remaining columns
+#     st.write("## Remaining Columns")
+#     remaining_cols_final = list(set(df.columns) - set(generalize_cols)-set(select_remaining))
+#     st.write(remaining_cols_final)
+    
+#     # Create checkbox for Privacy
+#     st.write("## Anonymization Level")
+#     anonymization_option1 = st.checkbox("K-Diversity", key="option1")
+#     anonymization_option1 = st.checkbox("L-Diversity", key="option2")
+#     anonymization_option1 = st.checkbox("K Annoynmization", key="option3")
+
+#     # Create submit button
+#     if st.button("Submit"):
+#         # Create two pie charts
+#         fig1 = go.Figure(go.Pie(
+#             labels=["Label 1", "Label 2"],
+#             values=[30, 40],
+#             marker=dict(colors=["red", "purple"]),
+#             textinfo="label+percent",
+#             title="Pie Chart 1"))
+
+#         fig2 = go.Figure(go.Pie(
+#             labels=["Label 3", "Label 4"],
+#             values=[50, 25],
+#             marker=dict(colors=["blue", "purple"]),
+#             textinfo="label+percent",
+#             title="Pie Chart 2"))
+
+# # Display pie charts side by side
+#         st.write("## Pie Charts")
+#         st.plotly_chart(fig1, use_container_width=True)
+#         st.plotly_chart(fig2, use_container_width=True)
+
+# # Create checkbox for Privacy
+#         st.write("## New Section")
+
+
