@@ -87,7 +87,8 @@ if uploaded_file is not None:
     # k = 2# desired k-anonymity level
     k = k_level
     
-    sensitive_attr = st.selectbox("Select a sensitive attribute", columns)
+    sensitive_attr_list=[col for col in df.columns if col not in quasi_identifiers]
+    sensitive_attr = st.selectbox("Select a sensitive attribute", sensitive_attr_list)
 
 
     if st.button("Submit"):
