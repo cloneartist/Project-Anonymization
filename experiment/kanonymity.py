@@ -1,9 +1,11 @@
-import math
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import streamlit as st
+import altair as alt
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.metrics import pairwise_distances
+
 
 def entropy(s):
     p, ln = pd.Series(s).value_counts(normalize=True), np.log2
@@ -45,60 +47,57 @@ def generalize(value, column_name):
         # Generalize the age value to the nearest 5-year interval
         return round(value/5.0)*5
     elif column_name == 'zipcode':
-        # Generalize the zipcode to the first 3 digits, to replace the exact
-        # location with a higher-level geographic region
+        # Generalize the zipcode to the first 3 digits, to replace the exact location with a higher-level geographic region
         return str(value)[:3]
     else:
         # If the column is not age or zipcode, return the original value
         return value
 
-uploaded_file = st.file_uploader("Upload Tweets dataset", type="csv")
+
+uploaded_file = st.file_uploader("Upload dataset", type="csv")
 if uploaded_file is not None:
    # Read the CSV file into a Pandas dataframe
-    df = pd.read_csv(uploaded_file)
-
-
-    print("---------------------------------------------------------------------------------------")
-
+   
+    dataf = pd.read_csv(uploaded_file,nrows=250)
+    df=dataf.copy()
     print(list(df.columns))
 
     print(df.dtypes)
-     # Display column headers
+    # Display column headers
     st.write("## Select Quasi Identifiers")
-    
+
     # Get column names
     columns = df.columns.tolist()
 
     # Create checkboxes for column selection
     generalize_cols = st.multiselect("Select columns", columns)
-    # Example usage
+
     # df = pd.read_csv('data.csv')
     st.write(df)
     quasi_identifiers = quasi_identifiers_fn(df)
-    print(len(quasi_identifiers),len(df.columns))
+    print(len(quasi_identifiers), len(df.columns))
     k_level = st.slider("Select k-anonymity level", 2, 10, 5)
     st.write("Selected k-anonymity level:", k_level)
 
     # Assume the dataset is stored in a pandas DataFrame object 'df'
-    # list of quasi-identifier column names
-    
-    
-    
+
     # quasi_identifiers = ['age', 'gender', 'race']
-    quasi_identifiers=generalize_cols
-    # Group the dataset by quasi-identifier values
+    quasi_identifiers = generalize_cols
 
-    # Assume the dataset is stored in a pandas DataFrame object 'df'
-    
-    
-    
     # k = 2# desired k-anonymity level
-    k=k_level
+    k = k_level
     
-    if st.button("Submit"):
-    # Identify small groups that violate the k-anonymity requirement
-        grouped_data = df.groupby(quasi_identifiers).size().reset_index(name='count')
+    sensitive_attr = st.selectbox("Select a sensitive attribute", columns)
 
+
+    if st.button("Submit"):
+
+        # Group the dataset by quasi-identifier values
+
+        grouped_data = df.groupby(
+            quasi_identifiers).size().reset_index(name='count')
+
+        # Identify small groups that violate the k-anonymity requirement
         small_groups = grouped_data[grouped_data['count'] < k]
 
         # Anonymize small groups using generalization
@@ -107,8 +106,6 @@ if uploaded_file is not None:
             generalized_values = []
             for qi in quasi_identifiers:
                 # Generalize the quasi-identifier value to a higher level of abstraction
-                # For example, round the age to the nearest 5-year interval, or replace the
-                # exact zipcode with the name of the city or county
                 generalized_value = generalize(group_values[qi], qi)
                 generalized_values.append(generalized_value)
             # Replace the original quasi-identifier values with the generalized values
@@ -119,20 +116,15 @@ if uploaded_file is not None:
 
         st.write(df)
 
-
-        # example data
-        data = pd.read_csv("data.csv")
+        # data = pd.read_csv(uploaded_file)
+        data=dataf.copy()
         anonymized_data = pd.read_csv("anonymized.csv")
-        # calculate the entropy of the sensitive attribute before and after anonymization
-        sensitive = "education"
+
+        # calculate the "entropy" of the sensitive attribute before and after anonymization
+        # sensitive = "education"
+        sensitive= sensitive_attr
         original_entropy = calculate_entropy(data[sensitive])
         anonymized_entropy = calculate_entropy(anonymized_data[sensitive])
-
-        # calculate the proportion of records with a unique quasi-identifier before and after anonymization
-        original_proportion = calculate_proportion_unique(data, quasi_identifiers)
-        anonymized_proportion = calculate_proportion_unique(
-            anonymized_data, quasi_identifiers)
-
         # create a bar chart showing the results
         fig, ax = plt.subplots(figsize=(8, 6))
         ax.bar(["Original", "Anonymized"], [original_entropy,
@@ -142,10 +134,16 @@ if uploaded_file is not None:
 
         # show the results in Streamlit
         st.pyplot(fig)
+        # calculate the proportion of records with a unique quasi-identifier before and after anonymization
+
+        original_proportion = calculate_proportion_unique(
+            data, quasi_identifiers)
+        anonymized_proportion = calculate_proportion_unique(
+            anonymized_data, quasi_identifiers)
 
         fig, ax = plt.subplots(figsize=(8, 6))
         ax.bar(["Original", "Anonymized"], [original_proportion,
-            anonymized_proportion], color=["blue", "orange"])
+                                            anonymized_proportion], color=["blue", "orange"])
         ax.set_ylabel("Proportion")
         ax.set_title(
             "Proportion of Records with Unique Quasi-Identifier Before and After Anonymization")
@@ -153,28 +151,27 @@ if uploaded_file is not None:
         # show the results in Streamlit
         st.pyplot(fig)
 
-
-        import pandas as pd
-        import numpy as np
-        import streamlit as st
-        import altair as alt
-        from sklearn.metrics import pairwise_distances
-
         # Load the original dataset and the anonymized dataset
-        original_data = pd.read_csv('data.csv')
+        # original_data = pd.read_csv('data.csv')
+        original_data=dataf.copy()
         anonymized_data = pd.read_csv('anonymized.csv')
-        print(len(original_data),len(anonymized_data))
+        print(len(original_data), len(anonymized_data))
         # Specify the quasi-identifier and sensitive attributes
         qi_attributes = quasi_identifiers
-        sensitive_attribute = 'occupation'
-
+        # sensitive_attribute = 'occupation'
+        sensitive_attribute=sensitive_attr
         # Calculate the information loss
-        original_data_modes = original_data.groupby(qi_attributes)[sensitive_attribute].apply(lambda x: x.mode().iloc[0]).reset_index()
-        anonymized_data_modes = anonymized_data.groupby(qi_attributes)[sensitive_attribute].apply(lambda x: x.mode().iloc[0]).reset_index()
+        original_data_modes = original_data.groupby(qi_attributes)[
+            sensitive_attribute].apply(lambda x: x.mode().iloc[0]).reset_index()
+        anonymized_data_modes = anonymized_data.groupby(qi_attributes)[
+            sensitive_attribute].apply(lambda x: x.mode().iloc[0]).reset_index()
         num_rows = min(len(original_data_modes), len(anonymized_data_modes))
-        original_data_modes = original_data_modes.sample(num_rows, random_state=42).reset_index()
-        anonymized_data_modes = anonymized_data_modes.sample(num_rows, random_state=42).reset_index()
-        iloss = np.sum(original_data_modes != anonymized_data_modes) / (num_rows)
+        original_data_modes = original_data_modes.sample(
+            num_rows, random_state=42).reset_index()
+        anonymized_data_modes = anonymized_data_modes.sample(
+            num_rows, random_state=42).reset_index()
+        iloss = np.sum(original_data_modes !=
+                       anonymized_data_modes) / (num_rows)
 
         # Measure the degree of re-identification risk
         encoder = OneHotEncoder(sparse=False)
@@ -182,8 +179,8 @@ if uploaded_file is not None:
         distances = pairwise_distances(encoded_data, metric='hamming')
         risks = np.sum(distances < 1/(2*k), axis=1) / len(qi_attributes)
 
-
         # Define a function to create a scatter plot of the re-identification risk
+
         def create_scatter_plot(risks):
             data = pd.DataFrame({
                 'Risk': risks,
@@ -193,7 +190,8 @@ if uploaded_file is not None:
                 x='Group',
                 y='Risk',
                 size=alt.Size('Risk', scale=alt.Scale(range=[50, 500])),
-                color=alt.Color('Risk', scale=alt.Scale(scheme='redyellowgreen')),
+                color=alt.Color('Risk', scale=alt.Scale(
+                    scheme='redyellowgreen')),
             ).configure_axis(
                 labelFontSize=20,
                 titleFontSize=20,
@@ -208,4 +206,3 @@ if uploaded_file is not None:
         st.write(iloss.drop('index'))
         st.write('## Re-identification Risk')
         st.write(create_scatter_plot(risks))
-
