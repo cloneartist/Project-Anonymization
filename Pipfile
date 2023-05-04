@@ -7,6 +7,9 @@ name = "pypi"
 presidio-anonymizer = "*"
 pandas = "*"
 presidio-analyzer = "*"
+matplotlib = "*"
+scikit-learn = "*"
+altair = "*"
 
 [dev-packages]
 
