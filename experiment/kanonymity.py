@@ -54,10 +54,103 @@ def generalize(value, column_name):
         return value
 
 
-uploaded_file = st.file_uploader("Upload dataset", type="csv")
-if uploaded_file is not None:
-   # Read the CSV file into a Pandas dataframe
-   
+
+def ola_anonymity():
+    # Load the dataset
+    data = pd.read_csv('data.csv')
+
+    # Get user input for the quasi-identifier attributes and the sensitive attribute
+    qi_attributes = st.multiselect('Select the quasi-identifier attributes:', options=data.columns)
+    sensitive_attribute = st.selectbox('Select the sensitive attribute:', options=data.columns)
+
+    # Get user input for the desired k-anonymity level
+    k = st.slider('Select the desired k-anonymity level:', min_value=1, max_value=len(data)//2, step=1)
+
+    # Get user input for the sensitivity weights for each attribute
+    sensitivity_weights = {}
+    for attribute in data.columns:
+        if attribute in qi_attributes or attribute == sensitive_attribute:
+            sensitivity_weights[attribute] = st.slider(f'Select the sensitivity weight for {attribute}:', min_value=1, max_value=10, step=1)
+        else:
+            sensitivity_weights[attribute] = 1
+
+    # Apply the weights to each attribute
+    attribute_weights = {}
+    for attribute in data.columns:
+        if attribute in qi_attributes or attribute == sensitive_attribute:
+            attribute_weights[attribute] = sensitivity_weights[attribute]
+        else:
+            attribute_weights[attribute] = 1
+
+    # Normalize the weights
+    total_weight = sum(attribute_weights.values())
+    normalized_weights = {attribute: weight/total_weight for attribute, weight in attribute_weights.items()}
+
+    # Get user input for the suppression and generalization rules for each attribute
+    suppression_rules = {}
+    generalization_rules = {}
+    for attribute in data.columns:
+        if attribute in qi_attributes:
+            suppression_rules[attribute] = st.selectbox(f'Select the suppression rule for {attribute}:', options=['keep', 'remove'])
+            generalization_rules[attribute] = st.selectbox(f'Select the generalization rule for {attribute}:', options=['keep', 'round', 'truncate'])
+        elif attribute == sensitive_attribute:
+            suppression_rules[attribute] = st.selectbox(f'Select the suppression rule for {attribute}:', options=['keep', 'remove'])
+            generalization_rules[attribute] = st.selectbox(f'Select the generalization rule for {attribute}:', options=['keep', 'round', 'truncate'])
+        else:
+            suppression_rules[attribute] = 'keep'
+            generalization_rules[attribute] = 'keep'
+
+
+    if st.button("Submit"):
+    # Group the data by the quasi-identifier attributes
+        groups = data.groupby(qi_attributes)
+
+
+        # Apply the anonymization rules to each group
+        anonymized_data = []
+        for _, group in groups:
+            # Determine the k-anonymity level of the group
+            group_size = len(group)
+            if group_size < k:
+                # Apply more aggressive anonymization rules to smaller groups
+                suppression_rule = 'remove'
+                generalization_rule = 'truncate'
+            else:
+                suppression_rule = suppression_rules[sensitive_attribute]
+                generalization_rule = generalization_rules[sensitive_attribute]
+            
+            # Apply the anonymization rules to the sensitive attribute
+            if suppression_rule == 'remove':
+                group[sensitive_attribute] = 'Unknown'
+            else:
+                if generalization_rule == 'keep':
+                    group[sensitive_attribute] = group[sensitive_attribute]
+                elif generalization_rule == 'round':
+                    group[sensitive_attribute] = round(group[sensitive_attribute], -3)
+                elif generalization_rule == 'truncate':
+                    group[sensitive_attribute] = group[sensitive_attribute] // 1000 * 1000
+                    
+            # Apply the generalization rules to the quasi-identifier attributes
+            for attribute in qi_attributes:
+                if generalization_rules[attribute] == 'keep':
+                    group[attribute] = group[attribute]
+                elif generalization_rules[attribute] == 'round':
+                    group[attribute] = round(group[attribute], -1)
+                elif generalization_rules[attribute] == 'truncate':
+                    group[attribute] = group[attribute] // 10 * 10
+            
+            # Add the anonymized group to the output dataset
+            anonymized_data.append(group)
+
+        # Combine the anonymized groups into a single dataframe
+        anonymized_data = pd.concat(anonymized_data)
+
+        # Output the anonymized dataset
+        anonymized_data.to_csv('anonymized_data_ola.csv', index=False)
+        st.write(anonymized_data)    
+def k_anonymity_algo():
+    
+    
     dataf = pd.read_csv(uploaded_file,nrows=250)
     df=dataf.copy()
     print(list(df.columns))
@@ -90,9 +183,9 @@ if uploaded_file is not None:
     sensitive_attr_list=[col for col in df.columns if col not in quasi_identifiers]
     sensitive_attr = st.selectbox("Select a sensitive attribute", sensitive_attr_list)
 
-
+    # st.write(ola_anonymity(quasi_identifiers,sensitive_attr))
     if st.button("Submit"):
-
+       
         # Group the dataset by quasi-identifier values
 
         grouped_data = df.groupby(
@@ -207,3 +300,12 @@ if uploaded_file is not None:
         st.write(iloss.drop('index'))
         st.write('## Re-identification Risk')
         st.write(create_scatter_plot(risks))
+
+uploaded_file = st.file_uploader("Upload dataset", type="csv")
+if uploaded_file is not None:
+   # Read the CSV file into a Pandas dataframe
+    algorithm = st.selectbox('Select the k-anonymization algorithm:', ('Basic', 'OLA'))
+    if algorithm=="Basic":
+        k_anonymity_algo()
+    elif algorithm=="OLA":
+        ola_anonymity()
