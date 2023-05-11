@@ -10,6 +10,7 @@ presidio-analyzer = "*"
 matplotlib = "*"
 scikit-learn = "*"
 altair = "*"
+cryptography = "*"
 
 [dev-packages]
 
