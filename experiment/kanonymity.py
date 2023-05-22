@@ -5,6 +5,8 @@ import streamlit as st
 import altair as alt
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.metrics import pairwise_distances
+import hashlib
+import time
 
 
 def entropy(s):
@@ -218,27 +220,36 @@ def k_anonymity_algo():
 
         df.to_csv("anonymized.csv", index=False)
 
+        # Compute hash of the anonymized data
+        hash_object = hashlib.sha256(df.to_csv().encode())
+        hash_value = hash_object.hexdigest()
+
+        # Append hash value to the CSV file as a new line
+        with open("anonymized.csv", "a") as file:
+            file.write("\n")
+            file.write("#Hash: {}".format(hash_value))
+
         st.write(df)
 
         # data = pd.read_csv(uploaded_file)
         data = dataf.copy()
         anonymized_data = pd.read_csv("anonymized.csv")
 
-        # calculate the "entropy" of the sensitive attribute before and after anonymization
-        # sensitive = "education"
-        sensitive = sensitive_attr
-        original_entropy = calculate_entropy(data[sensitive])
-        anonymized_entropy = calculate_entropy(anonymized_data[sensitive])
-        # create a bar chart showing the results
-        fig, ax = plt.subplots(figsize=(8, 6))
-        ax.bar(["Original", "Anonymized"], [original_entropy,
-                                            anonymized_entropy], color=["blue", "orange"])
-        ax.set_ylabel("Entropy")
-        ax.set_title(
-            "Entropy of Sensitive Attribute Before and After Anonymization")
+        # # calculate the "entropy" of the sensitive attribute before and after anonymization
+        # # sensitive = "education"
+        # sensitive = sensitive_attr
+        # original_entropy = calculate_entropy(data[sensitive])
+        # anonymized_entropy = calculate_entropy(anonymized_data[sensitive])
+        # # create a bar chart showing the results
+        # fig, ax = plt.subplots(figsize=(8, 6))
+        # ax.bar(["Original", "Anonymized"], [original_entropy,
+        #                                     anonymized_entropy], color=["blue", "orange"])
+        # ax.set_ylabel("Entropy")
+        # ax.set_title(
+        #     "Entropy of Sensitive Attribute Before and After Anonymization")
 
-        # show the results in Streamlit
-        st.pyplot(fig)
+        # # show the results in Streamlit
+        # st.pyplot(fig)
         # calculate the proportion of records with a unique quasi-identifier before and after anonymization
 
         original_proportion = calculate_proportion_unique(
@@ -249,12 +260,12 @@ def k_anonymity_algo():
         fig, ax = plt.subplots(figsize=(8, 6))
         ax.bar(["Original", "Anonymized"], [original_proportion,
                                             anonymized_proportion], color=["blue", "orange"])
-        ax.set_ylabel("Proportion")
-        ax.set_title(
-            "Proportion of Records with Unique Quasi-Identifier Before and After Anonymization")
+        # ax.set_ylabel("Proportion")
+        # ax.set_title(
+        #     "Proportion of Records with Unique Quasi-Identifier Before and After Anonymization")
 
-        # show the results in Streamlit
-        st.pyplot(fig)
+        # # show the results in Streamlit
+        # st.pyplot(fig)
 
         # Load the original dataset and the anonymized dataset
         # original_data = pd.read_csv('data.csv')
@@ -266,12 +277,17 @@ def k_anonymity_algo():
         # sensitive_attribute = 'occupation'
         sensitive_attribute = sensitive_attr
         # Calculate the information loss
-        original_data_modes = original_data.groupby(qi_attributes)[sensitive_attribute].apply(lambda x: x.mode().iloc[0]).reset_index()
-        anonymized_data_modes = anonymized_data.groupby(qi_attributes)[sensitive_attribute].apply(lambda x: x.mode().iloc[0]).reset_index()
+        original_data_modes = original_data.groupby(qi_attributes)[
+            sensitive_attribute].apply(lambda x: x.mode().iloc[0]).reset_index()
+        anonymized_data_modes = anonymized_data.groupby(qi_attributes)[
+            sensitive_attribute].apply(lambda x: x.mode().iloc[0]).reset_index()
         num_rows = min(len(original_data_modes), len(anonymized_data_modes))
-        original_data_modes = original_data_modes.sample(num_rows, random_state=42).reset_index()
-        anonymized_data_modes = anonymized_data_modes.sample(num_rows, random_state=42).reset_index()
-        iloss = np.sum(original_data_modes !=anonymized_data_modes) / (num_rows)
+        original_data_modes = original_data_modes.sample(
+            num_rows, random_state=42).reset_index()
+        anonymized_data_modes = anonymized_data_modes.sample(
+            num_rows, random_state=42).reset_index()
+        iloss = np.sum(original_data_modes !=
+                       anonymized_data_modes) / (num_rows)
 
         # Measure the degree of re-identification risk
         encoder = OneHotEncoder(sparse=False)
@@ -306,8 +322,6 @@ def k_anonymity_algo():
         st.write(iloss.drop('index'))
         st.write('## Re-identification Risk')
         st.write(create_scatter_plot(risks))
-
-
 
 
 def mondrian(df, k_anonymity, partition_mode, agg_mode):
@@ -505,8 +519,7 @@ def mondrian(df, k_anonymity, partition_mode, agg_mode):
                     else:
                         col_min = np.min(partition[:, column])
                         col_max = np.max(partition[:, column])
-                        
-                        
+
                         if col_min == col_max:
                             aggregate_values_for_partition.append(col_min)
                         else:
@@ -520,8 +533,6 @@ def mondrian(df, k_anonymity, partition_mode, agg_mode):
         dfn1 = dfn1.iloc[:, 1:]
         return np.array(dfn1)
 
-    # print('Setting up anonymisation...')
-
     # anonymise dataset
     aggregationArg = str(arguments[4])
     if aggregationArg not in ['m', 'r']:
@@ -532,28 +543,313 @@ def mondrian(df, k_anonymity, partition_mode, agg_mode):
         aggregation = 'mean'
 
     dfn = anonymize_df(df, equivalence_classes, cat_indices, aggregation)
-    # np.savetxt('anon_df.csv', dfn, fmt='%s', delimiter=';')
     dfn = pd.DataFrame(dfn)
-    # df = pd.read_csv('{}'.format(arguments[1]), sep=",", engine='python')
-    # print(df.columns)
     dfn.columns = dfcols
     dfn.to_csv("anon.csv")
 
-    # print('Anonymization completed.')
     st.write("### Anonymized dataset")
     dfn
-    # sys.exit(1)
 
 
+def mondrianlapace(df, k_anonymity, partition_mode, agg_mode):
+    arguments = ["", df, k_anonymity, partition_mode, agg_mode]
 
+    # remove NaNs
+    df.dropna(inplace=True)
+    df.reset_index(inplace=True)
+    df = df.iloc[:, 2:]
+    dfcols = df.columns
+    st.write("### Original dataset")
+    st.write(df)
+
+    # infer data types
+    types = list(df.dtypes)
+    # print(types)
+    cat_indices = [i for i in range(len(types)) if types[i] == "object"]
+
+    # convert df to numpy array
+    df = np.array(df)
+
+    # function to compute the span of a given column while restricted to a subset of rows (a data partition)
+    def colSpans(df, cat_indices, partition):
+        spans = dict()
+        for column in range(len(types)):
+            dfp = df[partition, column]  # restrict df to the current column
+            if column in cat_indices:
+                # span of categorical variables is its number of unique classes
+                span = len(np.unique(dfp))
+            else:
+                # span of numerical variables is its range
+                span = np.max(dfp) - np.min(dfp)
+            spans[column] = span
+        return spans
+
+    # function to split rows of a partition based on median value (categorical vs. numerical attributes)
+
+    def splitVal(df, dim, part, cat_indices, mode):
+        # restrict whole dataset to a single attribute and rows in this partition
+        dfp = df[part, dim]
+        unique = list(np.unique(dfp))
+        length = len(unique)
+        if dim in cat_indices:  # for categorical variables
+            if mode == 'strict':  # i do not mind about |lhs| and |rhs| being equal
+                lhv = unique[:length//2]
+                rhv = unique[length//2:]
+                lhs_v = list(list(np.where(np.isin(dfp, lhv)))
+                             [0])  # left partition
+                rhs_v = list(list(np.where(np.isin(dfp, rhv)))
+                             [0])  # right partition
+                lhs = [part[i] for i in lhs_v]
+                rhs = [part[i] for i in rhs_v]
+            elif mode == 'relaxed':  # i want |lhs| = |rhs| +-1
+                lhv = unique[:length//2]
+                rhv = unique[length//2:]
+                lhs_v = list(list(np.where(np.isin(dfp, lhv)))
+                             [0])  # left partition
+                rhs_v = list(list(np.where(np.isin(dfp, rhv)))
+                             [0])  # right partition
+                lhs = [part[i] for i in lhs_v]
+                rhs = [part[i] for i in rhs_v]
+                diff = len(lhs)-len(rhs)
+                if diff == 0:
+                    pass
+                elif diff < 0:
+                    # move first |diff|/2 indices from rhs to lhs
+                    lhs1 = rhs[:(np.abs(diff)//2)]
+                    rhs = rhs[(np.abs(diff)//2):]
+                    lhs = np.concatenate((lhs, lhs1))
+                else:
+                    rhs1 = lhs[-(diff//2):]
+                    lhs = lhs[:-(diff//2)]
+                    rhs = np.concatenate((rhs, rhs1))
+            else:
+                lhs, rhs = splitVal(df, dim, part, cat_indices, 'relaxed')
+        # for numerical variables, split based on median value (strict or relaxed)
+        else:
+            median = np.median(dfp)
+            # strict partitioning (do not equally split indices of median values)
+            if mode == 'strict':
+                lhs_v = list(list(np.where(dfp < median))[0])
+                rhs_v = list(list(np.where(dfp >= median))[0])
+                lhs = [part[i] for i in lhs_v]
+                rhs = [part[i] for i in rhs_v]
+            elif mode == 'relaxed':  # exact median values are equally split between the two halves
+                lhs_v = list(list(np.where(dfp < median))[0])
+                rhs_v = list(list(np.where(dfp > median))[0])
+                median_v = list(list(np.where(dfp == median))[0])
+                lhs_p = [part[i] for i in lhs_v]
+                rhs_p = [part[i] for i in rhs_v]
+                median_p = [part[i] for i in median_v]
+                # i need to have |lhs| = |rhs| +- 1
+                diff = len(lhs_p)-len(rhs_p)
+                if diff < 0:
+                    med_lhs = np.random.choice(median_p, size=np.abs(
+                        diff), replace=False)  # first even up |lhs_p| and |rhs_p|
+                    # prepare remaining indices for equal split
+                    med_to_split = [i for i in median_p if i not in med_lhs]
+                    lhs_p = np.concatenate((lhs_p, med_lhs))
+                else:  # same but |rhs_p| needs to be levelled up to |lhs_p|
+                    med_rhs = np.random.choice(
+                        median_p, size=np.abs(diff), replace=False)
+                    med_to_split = [i for i in median_p if i not in med_rhs]
+                    rhs_p = np.concatenate((rhs_p, med_rhs))
+                # split remaining median indices equally between lhs and rhs
+                med_lhs_1 = np.random.choice(med_to_split, size=(
+                    len(med_to_split)//2), replace=False)
+                med_rhs_1 = [i for i in med_to_split if i not in med_lhs_1]
+                lhs = np.concatenate((lhs_p, med_lhs_1))
+                rhs = np.concatenate((rhs_p, med_rhs_1))
+            else:
+                lhs, rhs = splitVal(df, dim, part, cat_indices, 'relaxed')
+        return [int(x) for x in lhs], [int(x) for x in rhs]
+
+    # create k-anonymous equivalence classes
+    def partitioning(df, k, cat_indices, mode):
+
+        final_partitions = []
+        # start with full dataset
+        working_partitions = [[x for x in range(len(df))]]
+
+        while len(working_partitions) > 0:  # while there is at least one working partition left
+
+            partition = working_partitions[0]  # take the first in the list
+            # remove it from list of working partitions
+            working_partitions = working_partitions[1:]
+
+            if len(partition) < 2*k:  # if it is not at least 2k long, i.e. if i cannot get any new acceptable partition pair, at least k-long each
+                # append it to final set of partitions
+                final_partitions.append(partition)
+                # and skip to the next partition
+            else:
+                # else, get spans of the feature columns restricted to this partition
+                spans = colSpans(df, cat_indices, partition)
+                # sort col indices in descending order based on their span
+                ordered_span_cols = sorted(
+                    spans.items(), key=lambda x: x[1], reverse=True)
+                for dim, _ in ordered_span_cols:  # select the largest first, then second largest, ...
+                    # try to split this partition
+                    lhs, rhs = splitVal(df, dim, partition, cat_indices, mode)
+                    # if new partitions are not too small (<k items), this partitioning is okay
+                    if len(lhs) >= k and len(rhs) >= k:
+                        working_partitions.append(lhs)
+                        # re-append both new partitions to set of working partitions for further partitioning
+                        working_partitions.append(rhs)
+                        break  # break for loop and go to next partition, if available
+                else:  # if no column could provide an allowable partitioning
+                    # add the whole partition to the list of final partitions
+                    final_partitions.append(partition)
+
+        return final_partitions
+
+    # print('Setting up partitioning...')
+
+    # build k-anonymous equivalence classes
+    k = int(arguments[2])
+    if k > len(df):
+        print('Invalid input. k must not exceed dataset size. Setting k to default 10.')
+        k = 10
+
+    modeArg = str(arguments[3])
+    if modeArg not in ['s', 'r']:
+        print("Invalid input. Partitioning mode must be 'r' for relaxed or 's' for strict.")
+        print("Setting relaxed mode as default.")
+    mode = 'relaxed'
+    if modeArg == 's':
+        mode = 'strict'
+
+    equivalence_classes = partitioning(df, k, cat_indices, mode)
+    sizes = []
+    for part in equivalence_classes:
+        sizes.append(len(part))
+    min_size = np.min(sizes)
+    # print('Partitioning completed.')
+    print('{} equivalence classes were created. Minimum size is {}.'.format(
+        len(equivalence_classes), min_size))
+
+    # generate the anonymised dataset
+    def anonymize_df(df, partitions, cat_indices, mode='range'):
+
+        anon_df = []
+        categorical = cat_indices
+
+        for ip, p in enumerate(partitions):
+            aggregate_values_for_partition = []
+            partition = df[p]
+            for column in range(len(types)):
+                if column in categorical:
+                    values = list(np.unique(partition[:, column]))
+                    aggregate_values_for_partition.append(','.join(values))
+                else:
+                    if mode == 'mean':
+                        aggregate_values_for_partition.append(
+                            np.mean(partition[:, column]))
+                    else:
+                        col_min = np.min(partition[:, column])
+                        col_max = np.max(partition[:, column])
+
+                        if col_min == col_max:
+                            aggregate_values_for_partition.append(col_min)
+                        else:
+                            aggregate_values_for_partition.append(
+                                '{}-{}'.format(col_min, col_max))
+            for i in range(len(p)):
+                anon_df.append([int(p[i])]+aggregate_values_for_partition)
+
+        df_anon = pd.DataFrame(anon_df)
+        dfn1 = df_anon.sort_values(df_anon.columns[0])
+        dfn1 = dfn1.iloc[:, 1:]
+        return np.array(dfn1)
+
+    # anonymise dataset
+    aggregationArg = str(arguments[4])
+    if aggregationArg not in ['m', 'r']:
+        print("Invalid input. Aggregation metrics must either be 'r' for range or 'm' for mean.")
+        print("Setting range metrics as default.")
+    aggregation = 'range'
+    if aggregationArg == 'm':
+        aggregation = 'mean'
+
+    start = time.time()
+
+    dfn = anonymize_df(df, equivalence_classes, cat_indices, aggregation)
+    dfn = pd.DataFrame(dfn)
+    dfn.columns = dfcols
+    dfn.to_csv("anon.csv")
+    # Compute hash of the anonymized data
+    hash_object = hashlib.sha256(dfn.to_csv().encode())
+    hash_value = hash_object.hexdigest()
+
+    # Append hash value to the CSV file as a new line
+    with open("anon.csv", "a") as file:
+        file.write("\n")
+        file.write("#Hash: {}".format(hash_value))
+
+    end = time.time()
+
+    print('Anonymization completed.')
+    print('Execution time: {:.2f} seconds'.format(end - start))
+    st.write("### Anonymized dataset")
+    dfn
+# Load the original dataset and the anonymized dataset
+        # original_data = pd.read_csv('data.csv')
+    original_data = df.copy()
+    anonymized_data = pd.read_csv('anon.csv')
+    # print(len(original_data), len(anonymized_data))
+    #     # Specify the quasi-identifier and sensitive attributes
+    qi_attributes = anonymized_data.columns
+    #     # sensitive_attribute = 'occupation'
+    # sensitive_attribute = sensitive_attr
+    #     # Calculate the information loss
+    # original_data_modes = original_data.groupby(qi_attributes)[
+    #         sensitive_attribute].apply(lambda x: x.mode().iloc[0]).reset_index()
+    # anonymized_data_modes = anonymized_data.groupby(qi_attributes)[
+    #         sensitive_attribute].apply(lambda x: x.mode().iloc[0]).reset_index()
+    # num_rows = min(len(original_data_modes), len(anonymized_data_modes))
+    # original_data_modes = original_data_modes.sample(
+    #         num_rows, random_state=42).reset_index()
+    # anonymized_data_modes = anonymized_data_modes.sample(
+    #         num_rows, random_state=42).reset_index()
+    # iloss = np.sum(original_data_modes !=
+    #                    anonymized_data_modes) / (num_rows)
+
+        # Measure the degree of re-identification risk
+    encoder = OneHotEncoder(sparse=False)
+    encoded_data = encoder.fit_transform(anonymized_data[qi_attributes])
+    distances = pairwise_distances(encoded_data, metric='hamming')
+    risks = np.sum(distances < 1/(2*k), axis=1) / len(qi_attributes)
+
+        # Define a function to create a scatter plot of the re-identification risk
+
+    def create_scatter_plot(risks):
+        data = pd.DataFrame({
+                'Risk': risks,
+                'Group': range(len(risks)),
+            })
+        chart = alt.Chart(data).mark_circle().encode(
+                x='Group',
+                y='Risk',
+                size=alt.Size('Risk', scale=alt.Scale(range=[50, 500])),
+                color=alt.Color('Risk', scale=alt.Scale(
+                    scheme='redyellowgreen')),
+            ).configure_axis(
+                labelFontSize=20,
+                titleFontSize=20,
+            ).configure_text(
+                fontSize=20,
+            )
+        return chart
+
+        # Display the evaluation results
+    st.write('# Anonymization Quality Evaluation')
+    # st.write('## Information Loss')
+    # st.write(iloss.drop('index'))
+    st.write('## Re-identification Risk')
+    st.write(create_scatter_plot(risks))
+    
+    
+    
 def mondrian_util(file):
     st.title("Mondrian Anonymity")
-
-    # File upload
-    # file = st.file_uploader("Upload CSV file", type=["csv"])
-    # if not file:
-    #     st.warning("Please upload a CSV file.")
-    #     return
 
     # K-anonymity level
     k_anonymity = st.number_input(
@@ -577,17 +873,17 @@ def mondrian_util(file):
             return
 
         # Call the mondrian function
-        mondrian(df, k_anonymity, partition_mode, agg_mode)
+        mondrianlapace(df, k_anonymity, partition_mode, agg_mode)
 
 
 uploaded_file = st.file_uploader("Upload dataset", type="csv")
 if uploaded_file is not None:
    # Read the CSV file into a Pandas dataframe
     algorithm = st.selectbox(
-        'Select the k-anonymization algorithm:', ('Basic', 'OLA', 'Mondrian Anonymity'))
+        'Select the k-anonymization algorithm:', ('Basic',  'Mondrian Anonymity'))
     if algorithm == "Basic":
         k_anonymity_algo()
     elif algorithm == "OLA":
         ola_anonymity()
-    elif algorithm=="Mondrian Anonymity":
+    elif algorithm == "Mondrian Anonymity":
         mondrian_util(uploaded_file)
