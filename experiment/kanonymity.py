@@ -557,7 +557,7 @@ def mondrianlapace(df, k_anonymity, partition_mode, agg_mode):
     # remove NaNs
     df.dropna(inplace=True)
     df.reset_index(inplace=True)
-    df = df.iloc[:, 2:]
+    df = df.iloc[:, 1:]
     dfcols = df.columns
     st.write("### Original dataset")
     st.write(df)
@@ -791,7 +791,7 @@ def mondrianlapace(df, k_anonymity, partition_mode, agg_mode):
     st.write("### Anonymized dataset")
     dfn
 # Load the original dataset and the anonymized dataset
-        # original_data = pd.read_csv('data.csv')
+    # original_data = pd.read_csv('data.csv')
     original_data = df.copy()
     anonymized_data = pd.read_csv('anon.csv')
     # print(len(original_data), len(anonymized_data))
@@ -812,31 +812,31 @@ def mondrianlapace(df, k_anonymity, partition_mode, agg_mode):
     # iloss = np.sum(original_data_modes !=
     #                    anonymized_data_modes) / (num_rows)
 
-        # Measure the degree of re-identification risk
+    # Measure the degree of re-identification risk
     encoder = OneHotEncoder(sparse=False)
     encoded_data = encoder.fit_transform(anonymized_data[qi_attributes])
     distances = pairwise_distances(encoded_data, metric='hamming')
     risks = np.sum(distances < 1/(2*k), axis=1) / len(qi_attributes)
 
-        # Define a function to create a scatter plot of the re-identification risk
+    # Define a function to create a scatter plot of the re-identification risk
 
     def create_scatter_plot(risks):
         data = pd.DataFrame({
-                'Risk': risks,
-                'Group': range(len(risks)),
-            })
+            'Risk': risks,
+            'Group': range(len(risks)),
+        })
         chart = alt.Chart(data).mark_circle().encode(
-                x='Group',
-                y='Risk',
-                size=alt.Size('Risk', scale=alt.Scale(range=[50, 500])),
-                color=alt.Color('Risk', scale=alt.Scale(
-                    scheme='redyellowgreen')),
-            ).configure_axis(
-                labelFontSize=20,
-                titleFontSize=20,
-            ).configure_text(
-                fontSize=20,
-            )
+            x='Group',
+            y='Risk',
+            size=alt.Size('Risk', scale=alt.Scale(range=[50, 500])),
+            color=alt.Color('Risk', scale=alt.Scale(
+                scheme='redyellowgreen')),
+        ).configure_axis(
+            labelFontSize=20,
+            titleFontSize=20,
+        ).configure_text(
+            fontSize=20,
+        )
         return chart
 
         # Display the evaluation results
@@ -845,9 +845,8 @@ def mondrianlapace(df, k_anonymity, partition_mode, agg_mode):
     # st.write(iloss.drop('index'))
     st.write('## Re-identification Risk')
     st.write(create_scatter_plot(risks))
-    
-    
-    
+
+
 def mondrian_util(file):
     st.title("Mondrian Anonymity")
 
