@@ -7,6 +7,7 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.metrics import pairwise_distances
 import hashlib
 import time
+import math
 
 
 def entropy(s):
@@ -51,6 +52,10 @@ def generalize(value, column_name):
     elif column_name == 'zipcode':
         # Generalize the zipcode to the first 3 digits, to replace the exact location with a higher-level geographic region
         return str(value)[:3]
+    elif column_name == 'latitude':
+        return round(value)
+    elif column_name == 'longitude':
+        return round(value) 
     else:
         # If the column is not age or zipcode, return the original value
         return value
