@@ -896,7 +896,7 @@ def mondrian_util(file):
     if st.button("Submit"):
         # Load the dataset
         try:
-            df = pd.read_csv(file)
+            df = pd.read_csv(file,nrows=500)
         except:
             st.error("Failed to load the dataset.")
             return
