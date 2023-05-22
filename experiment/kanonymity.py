@@ -179,7 +179,7 @@ def k_anonymity_algo():
     st.write(df)
     quasi_identifiers = quasi_identifiers_fn(df)
     print(len(quasi_identifiers), len(df.columns))
-    k_level = st.slider("Select k-anonymity level", 2, 10, 5)
+    k_level = st.number_input("Select k-anonymity level", 2, 10, 5)
     st.write("Selected k-anonymity level:", k_level)
 
     # Assume the dataset is stored in a pandas DataFrame object 'df'
