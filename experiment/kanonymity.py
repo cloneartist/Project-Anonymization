@@ -48,17 +48,42 @@ def calculate_proportion_unique(data, quasi_identifier):
 def generalize(value, column_name):
     if column_name == 'age':
         # Generalize the age value to the nearest 5-year interval
-        return round(value/5.0)*5
+        return round(value / 5.0) * 5
     elif column_name == 'zipcode':
         # Generalize the zipcode to the first 3 digits, to replace the exact location with a higher-level geographic region
         return str(value)[:3]
     elif column_name == 'latitude':
         return round(value)
     elif column_name == 'longitude':
-        return round(value) 
-    else:
-        # If the column is not age or zipcode, return the original value
+        return round(value)
+    elif column_name == 'housing_median_age':
+        # Generalize the housing median age to the nearest 10-year interval
+        return round(value / 10.0) * 10
+    elif column_name == 'mean_rooms':
+        # Generalize the mean number of rooms to the nearest integer
+        return round(value)
+    elif column_name == 'mean_bedrooms':
+        # Generalize the mean number of bedrooms to the nearest integer
+        return round(value)
+    elif column_name == 'population':
+        # Generalize the population to the nearest thousand
+        return round(value / 1000) * 1000
+    elif column_name == 'households':
+        # Generalize the number of households to the nearest thousand
+        return round(value / 1000) * 1000
+    elif column_name == 'median_income':
+        # Generalize the median income to the nearest thousand
+        return round(value / 1000) * 1000
+    elif column_name == 'median_house_value':
+        # Generalize the median house value to the nearest ten thousand
+        return round(value / 10000) * 10000
+    elif column_name == 'ocean_proximity':
+        # No generalization for ocean proximity column, return the original value
         return value
+    else:
+        # If the column is not recognized, return the original value
+        return value
+
 
 
 def ola_anonymity():
